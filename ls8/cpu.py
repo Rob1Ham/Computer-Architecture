@@ -11,37 +11,59 @@ class CPU:
         self.reg = [0] * 8
         #set the program counter to 0
         self.pc = 0
-        #create 8 bytes of RAM
-        self.ram = [0] * 8
+        #create 256 bytes of RAM
+        self.ram = [0] * 256
 
-    def load(self):
-        """Load a program into memory."""
+    def load(self,script):
 
         address = 0
 
         # For now, we've just hardcoded a program:
+        # Removing the hardcoded comments to create read in function
+        #to add machine code to RAM
+        # program = [
+        #     # From print8.ls8
+        #     0b10000010, # LDI R0,8
+        #     0b00000000, #registrar 0
+        #     0b00001000, # value 8
+        #     0b01000111, # PRN R0
+        #     0b00000000, #print value in first registrar
+        #     0b00000001, # HLT
+        # ]
+        # for instruction in program:
+        #     self.ram[address] = instruction
+        #     address += 1
 
-        program = [
-            # From print8.ls8
-            0b10000010, # LDI R0,8
-            0b00000000, #registrar 0
-            0b00001000, # value 8
-            0b01000111, # PRN R0
-            0b00000000, #print value in first registrar
-            0b00000001, # HLT
-        ]
-
-        for instruction in program:
-            self.ram[address] = instruction
-            address += 1
-
+        with open(script) as f:
+            for line in f:
+                #blank comments should be skipped
+                #in the event there is a comment
+                #we want the data to the left of the # symbol
+                #.strip is used to remove whitespace
+                comment_split = line.split("#")
+                command = comment_split[0].strip()
+                #The command needs to be casted and set to base 2
+                #print('command is: ' + command)
+                if line == "":
+                    continue
+                value = int(command,2)
+                #print('value is: ' + str(value))
+                #assign the converted value into the next entry in ram
+                self.ram[address] = value
+                #after entered into ram, increment the address value by 1
+                #to write to the next space of ram in the next command.
+                address += 1
+                
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        #elif op == "SUB": etc
+        elif op == "SUB":
+             self.reg[reg_a] -= self.reg[reg_b]
+        elif op == "MUL":
+             self.reg[reg_a] *= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
     
@@ -113,7 +135,7 @@ class CPU:
                 #one for the current instruction
                 #one for the integer value
                 #one for the registrar slot
-                self.pc += 3
+                self.pc += 3    
             #Writing logic for if the Print function is called
             elif instruction == 0b01000111:
                 #import pdb; pdb.set_trace()
@@ -126,6 +148,15 @@ class CPU:
                 #one for the current instruction
                 #one for the reg_slot
                 self.pc += 2
+            elif instruction == 0b10100010:
+                #if MULT is called
+
+                #grab the next two values in the program counter
+                #to find out what values in the registrar are going to be multiplied
+                reg_slot_1 = self.ram[self.pc+1]
+                reg_slot_2 = self.ram[self.pc+2]
+                self.alu('MUL',reg_slot_1,reg_slot_2)
+                self.pc +=3
             
             else:
                 print("I do not recognize that command")
