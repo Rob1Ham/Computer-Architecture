@@ -8,11 +8,13 @@ class CPU:
     def __init__(self):
         """Construct a new CPU."""
         #create 8 registrars
-        self.reg = [0] * 8
+        self.reg = [0b0] * 8
         #set the program counter to 0
         self.pc = 0
+        self.sp= 7
         #create 256 bytes of RAM
-        self.ram = [0] * 256
+        self.ram = [0b0] * 0xFF
+        self.reg[self.sp] = 0xF4
 
     def load(self,script):
 
@@ -36,6 +38,7 @@ class CPU:
 
         with open(script) as f:
             for line in f:
+                #print(line)
                 #blank comments should be skipped
                 #in the event there is a comment
                 #we want the data to the left of the # symbol
@@ -44,7 +47,8 @@ class CPU:
                 command = comment_split[0].strip()
                 #The command needs to be casted and set to base 2
                 #print('command is: ' + command)
-                if line == "":
+                #print(f"COMMAND:{command}")
+                if command == '':
                     continue
                 value = int(command,2)
                 #print('value is: ' + str(value))
@@ -157,7 +161,26 @@ class CPU:
                 reg_slot_2 = self.ram[self.pc+2]
                 self.alu('MUL',reg_slot_1,reg_slot_2)
                 self.pc +=3
-            
+            elif instruction == 0b01000101:
+                #PUSH
+                #determine which registrar being pushed to
+                reg_slot = self.ram[self.pc+1]
+                val = self.reg[reg_slot]
+                #decriment the stack pointer
+                self.reg[self.sp] -= 1
+                self.ram[self.reg[self.sp]] = val
+                self.pc += 2
+            elif instruction == 0b01000110:
+                #POP
+                #determine which registrar being pushed to
+                reg_slot = self.ram[self.pc+1]      
+                val = self.reg[reg_slot]
+                #update the value of the registrar
+                #at the reg_slot with the assigned value
+                self.reg[reg_slot] = val    
+                #incriment the stack pointer      
+                self.reg[self.sp] += 1
+                self.pc +=2
             else:
                 print("I do not recognize that command")
                 print(f"You are currently at Program Counter value: {self.pc}")
