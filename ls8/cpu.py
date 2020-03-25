@@ -11,10 +11,10 @@ class CPU:
         self.reg = [0b0] * 8
         #set the program counter to 0
         self.pc = 0
-        self.sp= 7
         #create 256 bytes of RAM
         self.ram = [0b0] * 0xFF
-        self.reg[self.sp] = 0xF4
+        self.reg[7] = 0xF4
+        self.sp = self.reg[7]
 
     def load(self,script):
 
@@ -110,6 +110,7 @@ class CPU:
         #kept in a while loop to continue working through passed in commands.
         running = True
         while running == True:
+            #print(f"PC:{self.pc}")
             #the Load function writes pre-written commands in the program variable to RAM
             #As a result, the instructions as loaded should cycle through RAM.
             instruction = self.ram[self.pc]
@@ -161,26 +162,59 @@ class CPU:
                 reg_slot_2 = self.ram[self.pc+2]
                 self.alu('MUL',reg_slot_1,reg_slot_2)
                 self.pc +=3
+            elif instruction == 0b10100000:
+                #if ADD is called
+
+                #grab the next to values in the program counter
+                #to findo ut what values in the registrar are going to be added
+                reg_slot_1 = self.ram[self.pc+1]
+                reg_slot_2 = self.ram[self.pc+2]
+                self.alu('ADD',reg_slot_1,reg_slot_2)
+                self.pc +=3
             elif instruction == 0b01000101:
                 #PUSH
-                #determine which registrar being pushed to
+                #determine which registrar is pushing their value to the stack
                 reg_slot = self.ram[self.pc+1]
                 val = self.reg[reg_slot]
                 #decriment the stack pointer
-                self.reg[self.sp] -= 1
-                self.ram[self.reg[self.sp]] = val
+                self.sp -= 1
+                #push the value pulled from the registar to the stack
+                self.ram[self.sp] = val
                 self.pc += 2
             elif instruction == 0b01000110:
                 #POP
-                #determine which registrar being pushed to
+                #determine which registrar will get the value popped from the stack
                 reg_slot = self.ram[self.pc+1]      
-                val = self.reg[reg_slot]
+                #val = self.reg[reg_slot]
                 #update the value of the registrar
                 #at the reg_slot with the assigned value
-                self.reg[reg_slot] = val    
+                value = self.ram[self.sp]
+                self.reg[reg_slot] = value
                 #incriment the stack pointer      
-                self.reg[self.sp] += 1
+                self.sp += 1
                 self.pc +=2
+            elif instruction == 0b01010000:
+                #since the CALL spec has the address after the CALL instruction
+                #designate the
+                return_address = self.pc + 2
+                #decriment the stack pointer by 1
+                self.sp -= 1
+                #assign the new top of the stack the value of the return address
+                self.ram[self.sp] = return_address
+
+                #with the return addres stored
+                #determine what registar slot is used for the called function
+                reg_slot = self.ram[self.pc+1]
+                #the subroutine location is the value at that designated reg slot
+                subroutine_location = self.reg[reg_slot]
+                #the program counter is set to the location of that sub routine
+                self.pc = subroutine_location
+
+            elif instruction == 0b00010001:
+                return_address = self.ram[self.sp]
+                self.sp += 1
+
+                self.pc = return_address
             else:
                 print("I do not recognize that command")
                 print(f"You are currently at Program Counter value: {self.pc}")
